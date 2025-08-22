@@ -156,7 +156,7 @@ function updateUI() {
 // Update distance display
 function updateDistanceDisplay() {
     if (points.length < 2) {
-        distanceDiv.innerHTML = '<h3>Distance</h3><p><strong>0.00 km</strong> (0.00 miles)</p>';
+        distanceDiv.innerHTML = '<h3>Distance</h3><p><strong>0.00 km / 0.00 miles</strong></p>';
         return;
     }
     
@@ -164,7 +164,7 @@ function updateDistanceDisplay() {
     const loopStatus = points.length >= 3 && points[0].isLoopClosed ? ' (Loop Closed)' : '';
     distanceDiv.innerHTML = `
         <h3>Total Distance${loopStatus}</h3>
-        <p><strong>${totalDistance.toFixed(2)} km</strong> (${(totalDistance * 0.621371).toFixed(2)} miles)</p>
+        <p><strong>${totalDistance.toFixed(2)} km / ${(totalDistance * 0.621371).toFixed(2)} miles</strong></p>
     `;
 }
 
