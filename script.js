@@ -151,8 +151,6 @@ function updateUI() {
     updatePointsList();
 }
 
-
-
 // Update distance display
 function updateDistanceDisplay() {
     if (points.length < 2) {
@@ -270,3 +268,123 @@ document.addEventListener('keydown', (e) => {
         clearAllPoints();
     }
 });
+
+// Create custom search control
+const SearchControl = L.Control.extend({
+    onAdd: function(map) {
+        const container = L.DomUtil.create('div', 'leaflet-control leaflet-control-search');
+        
+        // Create search button
+        const searchBtn = L.DomUtil.create('button', 'search-btn', container);
+        searchBtn.innerHTML = '🔍';
+        searchBtn.title = 'Search location';
+        
+        // Create search input container
+        const searchContainer = L.DomUtil.create('div', 'search-container', container);
+        searchContainer.style.display = 'none';
+        
+        // Create search input
+        const searchInput = L.DomUtil.create('input', 'search-input', searchContainer);
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Search location...';
+        
+        // Create search results container
+        const resultsContainer = L.DomUtil.create('div', 'search-results', searchContainer);
+        
+        // Toggle search input on button click
+        searchBtn.onclick = function(e) {
+            e.stopPropagation();
+            if (searchContainer.style.display === 'none') {
+                searchContainer.style.display = 'block';
+                searchInput.focus();
+            } else {
+                searchContainer.style.display = 'none';
+                resultsContainer.innerHTML = '';
+            }
+        };
+        
+        // Handle search input
+        let searchTimeout;
+        searchInput.oninput = function() {
+            clearTimeout(searchTimeout);
+            const query = searchInput.value.trim();
+            
+            if (query.length < 3) {
+                resultsContainer.innerHTML = '';
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                searchLocation(query, resultsContainer);
+            }, 500);
+        };
+        
+        // Prevent clicks on search input from bubbling to map
+        searchInput.onclick = function(e) {
+            e.stopPropagation();
+        };
+        
+        // Close search on outside click
+        document.addEventListener('click', function(e) {
+            if (!container.contains(e.target)) {
+                searchContainer.style.display = 'none';
+                resultsContainer.innerHTML = '';
+            }
+        });
+        
+        // Prevent clicks on search container from bubbling to map
+        searchContainer.onclick = function(e) {
+            e.stopPropagation();
+        };
+        
+        return container;
+    }
+});
+
+// Add search control to map
+new SearchControl({ position: 'topleft' }).addTo(map);
+
+// Search location function using Nominatim (OpenStreetMap's geocoding service)
+async function searchLocation(query, resultsContainer) {
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
+        const data = await response.json();
+        
+        if (data.length === 0) {
+            resultsContainer.innerHTML = '<div class="search-result">No results found</div>';
+            return;
+        }
+        
+        let html = '';
+        data.forEach(place => {
+            html += `
+                <div class="search-result" onclick="goToLocation(${place.lat}, ${place.lon}, '${place.display_name}')">
+                    <div class="search-result-name">${place.display_name}</div>
+                </div>
+            `;
+        });
+        
+        resultsContainer.innerHTML = html;
+    } catch (error) {
+        resultsContainer.innerHTML = '<div class="search-result">Search failed</div>';
+        console.error('Search error:', error);
+    }
+}
+
+// Go to searched location
+function goToLocation(lat, lng, name) {
+    map.setView([parseFloat(lat), parseFloat(lng)], 14);
+    
+    // Add a point at the searched location
+    addPoint(parseFloat(lat), parseFloat(lng));
+    updateMap();
+    updateUI();
+    
+    // Hide search results
+    const searchContainer = document.querySelector('.search-container');
+    const resultsContainer = document.querySelector('.search-results');
+    if (searchContainer) {
+        searchContainer.style.display = 'none';
+        resultsContainer.innerHTML = '';
+    }
+}
